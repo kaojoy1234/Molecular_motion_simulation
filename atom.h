@@ -8,4 +8,10 @@ struct Atom {
     struct TdVector f;
 };
 
+struct AtomGroup{
+    struct Atom representAtom;
+    float n;
+    float r;
+};
+
 #endif

@@ -1,2 +1,2 @@
 # Molecular_motion_simulation
-hello world
+a self learning project for molecular_motiom_stimulation

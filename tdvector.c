@@ -13,7 +13,7 @@ void tdSetVXYZ(float x,float y,float z,struct TdVector* v){
 	(*v).z = z;
 }
 
-void tdVMul(float factor,struct TdVector v,struct Tdvecor* o){
+void tdVMul(float factor,struct TdVector v,struct TdVector* o){
 	float x,y,z;
 	tdGetVXYZ(v,&x,&y,&z);
 
