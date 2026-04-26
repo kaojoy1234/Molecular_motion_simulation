@@ -3,6 +3,7 @@
 #include<unistd.h>
 #include"atom.h"
 #include"tdvector.h"
+#include"grid3.h"
 
 #define W 0.0001
 
@@ -10,57 +11,179 @@ int nowTick = 0;
 
 float dtt = 0.001; //delta time per tick
 
-void step(struct AtomGroup* ag){
-    //x, = v0 * t + 1/2 * a * t^2;
+void step(struct AGList* agl,struct AGList grids[10][10][10])
+{
+                float J = 0;
+                //x, = v0 * t + 1/2 * a * t^2;
+                for(int i=0; i<agl->size; i++)
+                {
+                                struct AtomGroup* ag = agl->data[i];
+                                //collpse
+                                float x,y,z;
+                                tdGetVXYZ(ag->representAtom.pos,&x,&y,&z);
+                                int ix,iy,iz;
+                                ix = x/5;
+                                iy = y/5;
+                                iz = z/5;
+                                for(int j=0;j<grids[ix][iy][iz].size;j++){
+                                                if(grids[ix][iy][iz].data[j]!=NULL&&
+                                                     grids[ix][iy][iz].data[j]->representAtom.id != ag->representAtom.id){
+                                                                float length;
+                                                                struct TdVector r;
+                                                                tdVMin(ag->representAtom.pos,grids[ix][iy][iz].data[j]->representAtom.pos,&r);
+                                                                tdLenOfV(r,&length);
+                                                                if(length<3){
+                                                                                printf("Idx:%d\thit!\n",i);
+                                                                }
+                                                }
+                                }
+                                //
+                                //Wall
+                                float pnx,pny,pnz;
+                                if(x<3||x+3>=10){
+                                                printf("Idx:%d\thit wall!\n",i);
+                                                struct TdVector n;
+                                                n.x = 1*(x<3)-1*(x+3>=10);
+                                                n.y = 0;
+                                                n.z = 0;
+                                                float dot;
+                                                tdDot(ag->representAtom.p,n,&dot);
+                                                if(dot<0){
+                                                                struct TdVector pn;
+                                                                tdVProject(ag->representAtom.p,n,&pn);
+                                                                tdGetVXYZ(pn,&pnx,&pny,&pnz);
+                                                                printf("Idx:%d\tpn:%f\t%f\t%f\n",i,pnx,pny,pnz);
+                                                                tdVMul(-2,pn,&pn);
+                                                                tdVPlus(ag->representAtom.p,pn,&(ag->representAtom.p));
+                                                                float dJ;
+                                                                tdLenOfV(pn,&dJ);
+                                                                J+=dJ/dtt;
+                                                }
+                                }
+                                if(y<3||y+3>=10){
+                                                printf("Idx:%d\thit wall!\n",i);
+                                                struct TdVector n;
+                                                n.x = 0;
+                                                n.y = 1*(y<3)-1*(y+3>=10);
+                                                n.z = 0;
+                                                float dot;
+                                                tdDot(ag->representAtom.p,n,&dot);
+                                                if(dot<0){
+                                                                struct TdVector pn;
+                                                                tdVProject(ag->representAtom.p,n,&pn);
+                                                                tdGetVXYZ(pn,&pnx,&pny,&pnz);
+                                                                printf("Idx:%d\tpn:%f\t%f\t%f\n",i,pnx,pny,pnz);
+                                                                tdVMul(-2,pn,&pn);
+                                                                tdVPlus(ag->representAtom.p,pn,&(ag->representAtom.p));
+                                                                float dJ;
+                                                                tdLenOfV(pn,&dJ);
+                                                                J+=dJ/dtt;
+                                                }
+                                }
+                                if(z<3||z+3>=10){
+                                                printf("Idx:%d\thit wall!\n",i);
+                                                struct TdVector n;
+                                                n.x = 0;
+                                                n.y = 0;
+                                                n.z = 1*(z<3)-1*(z+3>=10);
+                                                float dot;
+                                                tdDot(ag->representAtom.p,n,&dot);
+                                                if(dot<0){
+                                                                struct TdVector pn;
+                                                                tdVProject(ag->representAtom.p,n,&pn);
+                                                                tdGetVXYZ(pn,&pnx,&pny,&pnz);
+                                                                printf("Idx:%d\tpn:%f\t%f\t%f\n",i,pnx,pny,pnz);
+                                                                tdVMul(-2,pn,&pn);
+                                                                tdVPlus(ag->representAtom.p,pn,&(ag->representAtom.p));
+                                                                float dJ;
+                                                                tdLenOfV(pn,&dJ);
+                                                                J+=dJ/dtt;
+                                                }
+                                }
+                                //
+                                //update pos
+                                struct TdVector v;
+                                float vx,vy,vz;
+                                tdGetVXYZ((*ag).representAtom.p,&vx,&vy,&vz);
+                                tdSetVXYZ(vx,vy,vz,&v);
+                                tdVMul(1/(W*(*ag).n),v,&v);
 
-    struct TdVector v0;
-    float v0x,v0y,v0z;
-    tdGetVXYZ((*ag).representAtom.p,&v0x,&v0y,&v0z);
-    tdSetVXYZ(v0x,v0y,v0z,&v0);
-    tdVMul(1/(W*(*ag).n),v0,&v0);
+                                tdVMul(dtt,v,&v);
 
-    struct TdVector a;
-    float ax,ay,az;
-    tdGetVXYZ((*ag).representAtom.f,&ax,&ay,&az);
-    tdSetVXYZ(ax,ay,az,&a);
-    tdVMul(1/(W*(*ag).n),a,&a);
+                                tdVPlus((*ag).representAtom.pos,v,&((*ag).representAtom.pos));
+                                //update grids
+                                float nx,ny,nz;
+                                tdGetVXYZ(ag->representAtom.pos,&nx,&ny,&nz);
+                                int nix,niy,niz;
+                                nix = nx/5;
+                                niy = ny/5;
+                                niz = nz/5;
+                                if(nix!=nx||niy!=ny||niz!=nz){
+                                                removeFromList(&grids[ix][iy][iz],ag->agIdx);
+                                                addtoList(&grids[nix][niy][niz],ag);
+                                }
 
-    tdVMul(dtt,v0,&v0);
-    tdVMul(dtt*dtt/2,a,&a);
-
-    struct TdVector l;
-    tdVPlus(v0,a,&l);
-
-    tdVPlus((*ag).representAtom.pos,l,&((*ag).representAtom.pos));
-
-    nowTick++;
+                }
+                printf("\nF:%f\n",J);
+                nowTick++;
 }
 
-int main(){
-    struct AtomGroup ag;
-    tdSetVXYZ(1,1,2,&(ag.representAtom.pos));
-    tdSetVXYZ(1,1,0,&(ag.representAtom.p));
-    tdSetVXYZ(1,0,0,&(ag.representAtom.f));
+int main()
+{
+                //a block measure 5 units.
+                struct AGList grids[10][10][10];
+                for(int i=0;i<10;i++)
+                                for(int j=0;j<10;j++)
+                                                for(int k=0;k<10;k++){
+                                                                grids[i][j][k].size = 0;
+                                                                grids[i][j][k].capacity = 0;
+                                                }
+                struct AGList agl;
+                agl.size=0;
+                agl.capacity=0;
 
-    float posx,posy,posz;
-    tdGetVXYZ(ag.representAtom.pos,&posx,&posy,&posz);
-    float fx,fy,fz;
-    tdGetVXYZ(ag.representAtom.f,&fx,&fy,&fz);
-    float px,py,pz;
-    tdGetVXYZ(ag.representAtom.p,&px,&py,&pz);
-    printf("pos:%f %f %f\nf:%f %f %f\np:%f %f %f",posx,posy,posz,fx,fy,fz,px,py,pz);
+                struct AtomGroup ag1;
+                tdSetVXYZ(10,10,10,&(ag1.representAtom.pos));
+                tdSetVXYZ(-10,-10,-10,&(ag1.representAtom.p));
+                ag1.n = 100;
+                addtoList(&agl,&ag1);
+                float ag1px,ag1py,ag1pz;
+                tdGetVXYZ(ag1.representAtom.pos,&ag1px,&ag1py,&ag1pz);
+                int i1x,i1y,i1z;
+                i1x = ag1px/5;
+                i1y = ag1py/5;
+                i1z = ag1pz/5;
+                addtoList(&grids[i1x][i1y][i1z],&ag1);
+                ag1.representAtom.id = 0;
 
-    ag.n = 100;
+                struct AtomGroup ag2;
+                tdSetVXYZ(0,0,0,&(ag2.representAtom.pos));
+                tdSetVXYZ(10,10,10,&(ag2.representAtom.p));
+                ag2.n = 100;
+                addtoList(&agl,&ag2);
+                float ag2px,ag2py,ag2pz;
+                tdGetVXYZ(ag2.representAtom.pos,&ag2px,&ag2py,&ag2pz);
+                int i2x,i2y,i2z;
+                i2x = ag2px/5;
+                i2y = ag2py/5;
+                i2z = ag2pz/5;
+                addtoList(&grids[i2x][i2y][i2z],&ag2);
+                ag2.representAtom.id = 1;
 
-    while (1)
-    {
-        step(&ag);
+                while (1)
+                {
+                                step(&agl,grids);
 
-        float x,y,z;
-        tdGetVXYZ(ag.representAtom.pos,&x,&y,&z);
-        printf("pos:%f %f %f\nnowtick:%d\n",x,y,z,nowTick);
-        sleep(1);
-    }
-    
-    return 0;
+                                printf("nowTick:%d\n\n",nowTick);
+                                for(int i=0; i<agl.size; i++){
+                                                printf("index:%d\n",i);
+                                                float x,y,z;
+                                                tdGetVXYZ(agl.data[i]->representAtom.pos,&x,&y,&z);
+                                                printf("pos:%f\t%f\t%f\n",x,y,z);
+                                                printf("grid:%f\t%f\t%f\n",x/5,y/5,z/5);
+                                }
+                                sleep(1);
+                }
+
+                return 0;
 }
