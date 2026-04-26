@@ -5,13 +5,14 @@
 struct Atom {
     struct TdVector pos;
     struct TdVector p;
-    struct TdVector f;
+    int id;
 };
 
 struct AtomGroup{
     struct Atom representAtom;
     float n;
     float r;
+    int agIdx;
 };
 
 #endif
