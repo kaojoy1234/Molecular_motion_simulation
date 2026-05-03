@@ -1,17 +1,14 @@
 #ifndef GRID3_H
 #define GRID3_H
-#include"atom.h"
 
-struct AGList{
-                int size;
-                int capacity;
-                struct AtomGroup** data;
+struct Cell{
+    int* ids;
+    int size;
+    int capacity;
 };
 
-void resizeAGList(struct AGList* agl,int newSize);
+void addToCell(struct Cell* cell,int a);
 
-void addtoList(struct AGList* agl,struct AtomGroup* ag);
+void removeFromCell(struct Cell* cell,int idx);
 
-void removeFromList(struct AGList* agl,int agIdx);
-
-#endif // GRID3_H
+#endif
