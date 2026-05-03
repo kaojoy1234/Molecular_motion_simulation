@@ -5,14 +5,24 @@
 struct Atom {
     struct TdVector pos;
     struct TdVector p;
-    int id;
 };
 
 struct AtomGroup{
-    struct Atom representAtom;
+    struct TdVector pos;
+    struct TdVector p;
     float n;
     float r;
-    int agIdx;
+    int id;
 };
+
+struct AGList{
+                int size;
+                int capacity;
+                struct AtomGroup* data;
+};
+
+void resizeAGList(struct AGList* agl,int newSize);
+
+void addtoList(struct AGList* agl,struct AtomGroup ag);
 
 #endif
